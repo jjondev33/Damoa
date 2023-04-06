@@ -1,28 +1,56 @@
 const express = require('express');
-const axios = require('axios');
-const cheerio = require('cheerio');
+const cors = require('cors');
+
+const schedule = require('./schedule.js');
 const db_connect = require('./db_connect.js');
 const scraping = require('./scraping.js');
-const moment = require('moment');
+const test_datas = require(`./test_datas.js`);
+const Pro_info = require(`./prodInfoSchema.js`);
+
 
 const app = express();
+app.use(cors());
 
 // Start the server
 app.listen(3000, () => console.log('Server started on port 3000'));
 
-// 매일 전체 물건 가격 최신화
-db_connect.node_schedule();
 
-//  p_url를 포함하여 get방식으로 요청시
+// 매 시간 데이터 최신화
+schedule.hourlyRoutine();
+
+// 매 일 DB prices 순서 정렬 체크 
+schedule.dailyRoutine();
+
+// 주소/crawl?pcode=(제품코드 또는 p_url) 또는
+// 주소/crawl?p_url=(모바일공유시 생성된 주소) get방식으로 요청시
 app.get('/crawl', async (req, res) => {
+
+  // 데이터 스크랩핑 문서 pro_info에 저장
   const pro_info  = await scraping.parsing(req.query.pcode, req.query.p_url);
 
-  res.json(await db_connect.save_prod_info(pro_info));
+  if(!pro_info) {
+    res.send("error data")
+  } else {
+    res.json(await db_connect.save_prod_info(pro_info));
+  }
+
 });
 
-//  p_url를 포함하여 get방식으로 요청시
-app.get('/add', async (req, res) => {
-  const pro_info  = await scraping.parsing(req.query.pcode, req.query.p_url);
 
-  res.json({pcode : pro_info.pcode, name: pro_info.name, img_src : pro_info.img_src , price : pro_info.prices[0].low_price});
+// 
+// 주소/sort 사용시 DB데이터 문서마다 prices 순서 오름차순으로 정렬
+app.get('/sort', async (req, res) => {
+  
+  // 전 문서 저장
+  const pro_infos = await Pro_info.find();
+
+  //문서별 반복
+  pro_infos.forEach(async pro_info => {
+    
+    // 문서내 prices 데이터 순서 오름차순 및 중복 데이터 삭제 후 저장
+    await test_datas.removeDuplicatePrices(pro_info.prices).save();
+  });
+
+  res.json(pro_infos);
+
 });

@@ -16,18 +16,18 @@ const getHTML = async (url) => {
   };
   
   // 파라미터로 pcode(제품 코드) 입력 후 해당 url의 HTML 파싱 한 후 [ 해당 제품 당일 최저가 , 해당 제품 이미지 src ] return
-  const parsing = async (p_code, p_url) => {
+  async function parsing (p_code, p_url) {
 
     let url = "";
 
-    if(p_code != null) {
+    if(p_code) {
         console.log("pcode 입력 : " + p_code);
         url = "https://prod.danawa.com/info/?pcode=" + p_code;
-        console.log(url);
-    } else if (p_url != null) {
+    } else if (p_url) {
         console.log("p_url 입력 : " + p_url);
         url = "https://danawa.page.link/" + p_url;
-        console.log(url);
+    } else {
+      return false;
     };
 
     const html = await getHTML(url);
@@ -49,10 +49,7 @@ const getHTML = async (url) => {
     pro_info.img_src = "https:" + p_json.image[0];
   
     // 다나와 최저가 저장
-    pro_info.prices.push({low_price : Number(p_json.offers.lowPrice), date : Number(moment().format(`YYYYMMDD`))});
-
-    
-    console.log("parsing : " + pro_info)
+    pro_info.prices.push({low_price : Number(p_json.offers.lowPrice), date : Number(moment().add(9, 'hours').format(`YYYYMMDD`))});
 
     return pro_info;
   };
