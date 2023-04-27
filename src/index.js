@@ -4,7 +4,7 @@ const cors = require('cors');
 const schedule = require('./schedule.js');
 const db_connect = require('./db_connect.js');
 const scraping = require('./scraping.js');
-const test_datas = require(`./test_datas.js`);
+const sorting_prices = require(`./sorting_prices.js`);
 const Pro_info = require(`./prodInfoSchema.js`);
 
 
@@ -37,7 +37,6 @@ app.get('/crawl', async (req, res) => {
 });
 
 
-// 
 // 주소/sort 사용시 DB데이터 문서마다 prices 순서 오름차순으로 정렬
 app.get('/sort', async (req, res) => {
   
@@ -48,7 +47,8 @@ app.get('/sort', async (req, res) => {
   pro_infos.forEach(async pro_info => {
     
     // 문서내 prices 데이터 순서 오름차순 및 중복 데이터 삭제 후 저장
-    await test_datas.removeDuplicatePrices(pro_info.prices).save();
+    await sorting_prices.removeDuplicatePrices(pro_info.prices);
+    dbModel.saveProdinfo(pro_info);
   });
 
   res.json(pro_infos);

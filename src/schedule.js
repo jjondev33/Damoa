@@ -3,14 +3,14 @@ const moment = require('moment');
 
 const scraping = require('./scraping.js');
 const db_connect = require('./db_connect.js');
-const test_datas = require(`./test_datas.js`);
-const Pro_info = require(`./prodInfoSchema.js`);
+const sorting_prices = require(`./sorting_prices.js`);
+const dbModel = require('./dbModel.js');
 
 
 // 매 시간 반복하는 함수
 function hourlyRoutine() {
 
-    console.log(`데이터 최신화 ${Number(moment().add(9, 'hours').format(`YYYYMMDD`))}`);
+    console.log(`데이터 최신화 ${moment().add(9, 'hours')}`);
 
     const rule = new schedule.RecurrenceRule();
     rule.minute = 0;
@@ -19,7 +19,7 @@ function hourlyRoutine() {
     schedule.scheduleJob(rule, async () => {
 
         // 전 제품 정보페이지를 저장
-        const pro_infos = await Pro_info.find();
+        const pro_infos = await dbModel.findAll();
 
         // 제품마다 가격 최신화 실행
         pro_infos.forEach(async (pro_info) => {
@@ -33,7 +33,7 @@ function hourlyRoutine() {
 //매일 반복하는 함수
 function dailyRoutine() {
 
-    console.log(`데이터 최신화 ${Number(moment().add(9, 'hours').format(`YYYYMMDD`))}`);
+    console.log(`데이터 최신화 ${moment().add(9, 'hours')}`);
 
     // 최신 가격 업데이트 시간 
     const rule = new schedule.RecurrenceRule();
@@ -44,12 +44,14 @@ function dailyRoutine() {
     schedule.scheduleJob(rule, async () => {
 
         // 전 제품 정보페이지를 저장
-        const pro_infos = await Pro_info.find();
+        const pro_infos = await dbModel.findAll();
 
         // 문서 별 반복
         pro_infos.forEach(async (pro_info) => {
             // 문서내 prices 데이터 순서 오름차순 및 중복 데이터 삭제 후 저장
-            await test_datas.removeDuplicatePrices(pro_info.prices).save();
+            pro_info.prices = await sorting_prices.removeDuplicatePrices(pro_info.prices);
+            dbModel.saveProdinfo(pro_info);
+
         })
     });
 };
